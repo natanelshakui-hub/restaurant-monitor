@@ -303,11 +303,20 @@ def get_booking_url(restaurant):
 NOTIFIED = set()  # avoid duplicate alerts per (restaurant, date)
 
 def get_next_dates(restaurant):
-    """Return upcoming dates (up to 14 days) matching the restaurant's day preferences."""
     from datetime import timedelta
+    scope = restaurant.get("scope", "days")
+    today = datetime.now().date()
+
+    if scope == "specific":
+        sd = restaurant.get("specific_date", "")
+        return [sd] if sd else []
+
+    if scope == "30d":
+        return [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(30)]
+
+    # "days" — weekday-based (default)
     day_map = {"א": 6, "ב": 0, "ג": 1, "ד": 2, "ה": 3, "ו": 4, "ש": 5}
     wanted = [day_map[d] for d in restaurant.get("days", []) if d in day_map]
-    today = datetime.now().date()
     return [
         (today + timedelta(days=i)).strftime("%Y-%m-%d")
         for i in range(14)
@@ -395,6 +404,28 @@ def toggle_restaurant(rid):
             r["active"] = not r.get("active", True)
     save(data)
     return jsonify({"ok": True})
+
+@app.route("/api/scan", methods=["POST"])
+def scan_all():
+    date = (request.json or {}).get("date", "")
+    if not date:
+        return jsonify({"error": "missing date"}), 400
+    results = []
+    for r in load():
+        if not r.get("active", True):
+            continue
+        r = dict(r)
+        r["next_date"] = date
+        platform = r.get("platform", "ontopo")
+        available, slots = check_ontopo(r) if platform == "ontopo" else check_tabit(r)
+        results.append({
+            "id": r["id"],
+            "name": r["name"],
+            "available": available,
+            "slots": slots,
+            "booking_url": get_booking_url(r) if available else None,
+        })
+    return jsonify(results)
 
 # Load restaurant list into memory once at startup (before monitor thread starts).
 # Guard against double-start when Flask reloader forks a child process.

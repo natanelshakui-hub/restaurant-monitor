@@ -3,76 +3,164 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>מעקב הזמנות מסעדות</title>
+<title>שומר שולחן</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, 'Segoe UI', Arial, sans-serif; background: #f5f5f0; color: #1a1a1a; padding: 20px; }
-  .container { max-width: 680px; margin: 0 auto; }
-  h1 { font-size: 22px; font-weight: 500; margin-bottom: 20px; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
-  .stat { background: #fff; border-radius: 10px; padding: 14px; border: 1px solid #e8e8e3; }
-  .stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
-  .stat-value { font-size: 24px; font-weight: 500; }
-  .card { background: #fff; border-radius: 12px; border: 1px solid #e8e8e3; padding: 16px 20px; margin-bottom: 10px; }
-  .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
-  .rest-name { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
-  .badges { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
-  .badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
-  .badge-ontopo { background: #e8f0fe; color: #1a56db; }
-  .badge-tabit { background: #fde8f0; color: #c21a6b; }
-  .badge-active { background: #e6f4ea; color: #137333; }
-  .badge-paused { background: #f1f1f1; color: #888; }
-  .meta { font-size: 13px; color: #666; display: flex; gap: 16px; margin-bottom: 10px; flex-wrap: wrap; }
-  .days { display: flex; gap: 6px; flex-wrap: wrap; }
-  .day { font-size: 11px; padding: 3px 8px; border-radius: 20px; border: 1px solid #ddd; color: #999; }
-  .day.on { background: #f0f0f0; color: #333; border-color: #bbb; }
-  .actions { display: flex; gap: 8px; align-items: center; }
-  .toggle { position: relative; width: 38px; height: 22px; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .knob { position: absolute; top:0; left:0; right:0; bottom:0; background: #ccc; border-radius: 22px; cursor: pointer; transition: .2s; }
-  .knob:before { content:""; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
-  input:checked + .knob { background: #1D9E75; }
-  input:checked + .knob:before { transform: translateX(16px); }
-  .btn-del { background: none; border: 1px solid #fcc; color: #c00; border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
-  .btn-del:hover { background: #fff0f0; }
-  .add-btn { display: flex; align-items: center; gap: 6px; background: none; border: 1px solid #bbb; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 14px; margin-bottom: 16px; }
-  .add-btn:hover { background: #f5f5f0; }
-  .form { background: #fff; border: 1.5px solid #4a90e2; border-radius: 12px; padding: 20px; margin-bottom: 16px; display: none; }
-  .form.open { display: block; }
-  .form-title { font-size: 15px; font-weight: 500; margin-bottom: 14px; }
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-  .fg { display: flex; flex-direction: column; gap: 5px; }
-  .fg label { font-size: 12px; color: #666; }
-  .fg input, .fg select { padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
-  .days-pick { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-  .day-btn { font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 1px solid #ddd; background: none; cursor: pointer; color: #666; }
-  .day-btn.sel { background: #e8f0fe; color: #1a56db; border-color: #4a90e2; }
-  .form-actions { display: flex; gap: 10px; margin-top: 14px; }
-  .btn-save { background: #4a90e2; color: #fff; border: none; border-radius: 8px; padding: 8px 20px; font-size: 14px; cursor: pointer; font-weight: 500; }
-  .btn-cancel { background: none; border: 1px solid #ddd; border-radius: 8px; padding: 8px 16px; font-size: 14px; cursor: pointer; color: #666; }
-  .slug-hint { font-size: 11px; color: #999; margin-top: 3px; }
-  .empty { text-align: center; color: #aaa; padding: 40px; font-size: 14px; }
-  .last-alert { font-size: 11px; color: #aaa; margin-top: 6px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, 'Segoe UI', Arial, sans-serif; background: #f7f5f0; color: #1a1a1a; }
+
+/* Header */
+.header {
+  background: #0f6e56;
+  color: #fff;
+  padding: 18px 24px 16px;
+}
+.header-inner { max-width: 680px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+.header-title { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+.header-sub { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+
+/* Main */
+.container { max-width: 680px; margin: 0 auto; padding: 20px 16px 40px; }
+
+/* Scan section */
+.scan-box {
+  background: #fff;
+  border: 1px solid #e0ded8;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.scan-label { font-size: 13px; color: #555; white-space: nowrap; }
+.scan-date { padding: 7px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; background: #faf9f7; flex: 1; min-width: 130px; }
+.scan-btn {
+  background: #1D9E75; color: #fff; border: none; border-radius: 8px;
+  padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+}
+.scan-btn:hover { background: #178a63; }
+.scan-btn:disabled { opacity: 0.5; cursor: default; }
+.scan-results { width: 100%; margin-top: 4px; }
+.scan-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid #f0ede8; font-size: 13px; }
+.scan-row:first-child { border-top: none; }
+.scan-avail { color: #0f6e56; font-weight: 500; }
+.scan-none { color: #aaa; }
+.scan-link { font-size: 12px; color: #1D9E75; text-decoration: none; margin-right: 8px; }
+.scan-link:hover { text-decoration: underline; }
+
+/* Add button */
+.add-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: none; border: 1px dashed #bbb; border-radius: 10px;
+  padding: 10px 18px; cursor: pointer; font-size: 14px; color: #666;
+  width: 100%; margin-bottom: 14px; justify-content: center;
+}
+.add-btn:hover { background: #f0ede8; }
+
+/* Form */
+.form {
+  background: #fff; border: 1.5px solid #1D9E75; border-radius: 12px;
+  padding: 20px; margin-bottom: 16px; display: none;
+}
+.form.open { display: block; }
+.form-title { font-size: 15px; font-weight: 500; margin-bottom: 16px; color: #0f6e56; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.fg { display: flex; flex-direction: column; gap: 5px; }
+.fg label { font-size: 12px; color: #666; font-weight: 500; }
+.fg input, .fg select { padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: #faf9f7; }
+.fg input:focus, .fg select:focus { outline: none; border-color: #1D9E75; }
+.slug-hint { font-size: 11px; color: #aaa; margin-top: 2px; }
+
+/* Scope toggle */
+.scope-toggle { display: flex; gap: 0; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin-top: 4px; }
+.scope-btn {
+  flex: 1; padding: 7px 4px; font-size: 12px; border: none; background: none;
+  cursor: pointer; color: #666; transition: background .15s; text-align: center;
+}
+.scope-btn.active { background: #e1f5ee; color: #0f6e56; font-weight: 500; }
+.scope-btn + .scope-btn { border-right: 1px solid #ddd; }
+
+/* Days picker */
+.days-wrap { display: flex; flex-direction: column; gap: 6px; }
+.days-pick { display: flex; gap: 6px; flex-wrap: wrap; }
+.day-btn {
+  font-size: 12px; padding: 5px 11px; border-radius: 20px;
+  border: 1px solid #ddd; background: none; cursor: pointer; color: #666;
+}
+.day-btn.sel { background: #e1f5ee; color: #0f6e56; border-color: #1D9E75; }
+.day-btn:disabled { opacity: 0.35; cursor: default; }
+
+.form-actions { display: flex; gap: 10px; margin-top: 16px; }
+.btn-save { background: #1D9E75; color: #fff; border: none; border-radius: 8px; padding: 9px 22px; font-size: 14px; cursor: pointer; font-weight: 500; }
+.btn-save:hover { background: #178a63; }
+.btn-cancel { background: none; border: 1px solid #ddd; border-radius: 8px; padding: 9px 16px; font-size: 14px; cursor: pointer; color: #666; }
+
+/* Cards */
+.card {
+  background: #fff; border-radius: 12px; border: 1px solid #e0ded8;
+  padding: 15px 18px; margin-bottom: 10px; transition: border-color .15s;
+}
+.card.specific { border-color: #185fa5; }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.rest-name { font-size: 16px; font-weight: 500; margin-bottom: 7px; }
+.badges { display: flex; gap: 6px; margin-bottom: 9px; flex-wrap: wrap; }
+.badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; }
+.badge-ontopo { background: #eeedfe; color: #534ab7; }
+.badge-tabit { background: #fde8f0; color: #c21a6b; }
+.badge-active { background: #e1f5ee; color: #0f6e56; }
+.badge-paused { background: #f0f0ee; color: #888; }
+.badge-scope-days { background: #f0ede8; color: #7a5c3a; }
+.badge-scope-30d { background: #e1f5ee; color: #0f6e56; }
+.badge-scope-specific { background: #e6f1fb; color: #185fa5; }
+.meta { font-size: 13px; color: #666; display: flex; gap: 14px; flex-wrap: wrap; }
+.days-row { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+.day-chip { font-size: 11px; padding: 2px 7px; border-radius: 12px; border: 1px solid #ddd; color: #bbb; }
+.day-chip.on { background: #f0ede8; color: #7a5c3a; border-color: #c8b89a; }
+.actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.toggle { position: relative; width: 38px; height: 22px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.knob { position: absolute; top:0; left:0; right:0; bottom:0; background: #ccc; border-radius: 22px; cursor: pointer; transition: .2s; }
+.knob:before { content:""; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
+input:checked + .knob { background: #1D9E75; }
+input:checked + .knob:before { transform: translateX(16px); }
+.btn-del { background: none; border: 1px solid #f5c6c6; color: #c00; border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
+.btn-del:hover { background: #fff0f0; }
+.last-alert { font-size: 11px; color: #aaa; margin-top: 7px; }
+.empty { text-align: center; color: #aaa; padding: 48px 20px; font-size: 14px; line-height: 1.7; }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>🔔 מעקב הזמנות מסעדות</h1>
 
-  <div class="stats">
-    <div class="stat"><div class="stat-label">מקומות במעקב</div><div class="stat-value" id="s-total">0</div></div>
-    <div class="stat"><div class="stat-label">פעילים עכשיו</div><div class="stat-value" id="s-active">0</div></div>
-    <div class="stat"><div class="stat-label">בדיקה כל</div><div class="stat-value" style="font-size:16px;padding-top:4px">5 דקות</div></div>
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <div class="header-title">שומר שולחן</div>
+      <div class="header-sub" id="header-sub">טוען...</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Scan all -->
+  <div class="scan-box">
+    <span class="scan-label">בדוק כל המסעדות לתאריך:</span>
+    <input class="scan-date" type="date" id="scan-date" />
+    <button class="scan-btn" onclick="scanAll()" id="scan-btn">בדוק הכל</button>
+    <div class="scan-results" id="scan-results" style="display:none"></div>
   </div>
 
+  <!-- Add button -->
   <button class="add-btn" onclick="toggleForm()">+ הוסף מקום</button>
 
+  <!-- Add form -->
   <div class="form" id="add-form">
     <div class="form-title">מקום חדש</div>
     <div class="form-grid">
       <div class="fg">
         <label>שם המסעדה / בר</label>
-        <input id="f-name" type="text" placeholder='למשל: אנונה' />
+        <input id="f-name" type="text" placeholder="למשל: אנונה" />
       </div>
       <div class="fg">
         <label>פלטפורמה</label>
@@ -81,10 +169,10 @@
           <option value="tabit">טביט</option>
         </select>
       </div>
-      <div class="fg">
+      <div class="fg" style="grid-column:span 2">
         <label>כתובת באתר (slug)</label>
-        <input id="f-slug" type="text" placeholder='למשל: anona-tlv' />
-        <div class="slug-hint">מה שמופיע ב-URL של המסעדה באתר</div>
+        <input id="f-slug" type="text" placeholder="מה שמופיע ב-URL של המסעדה" />
+        <div class="slug-hint">למשל: anona-tlv או 69127207</div>
       </div>
       <div class="fg">
         <label>שעה מועדפת</label>
@@ -95,7 +183,17 @@
         <input id="f-guests" type="number" value="2" min="1" max="20" />
       </div>
     </div>
-    <div class="fg">
+
+    <div class="fg" style="margin-bottom:12px">
+      <label>טווח חיפוש</label>
+      <div class="scope-toggle">
+        <button class="scope-btn active" data-scope="days" onclick="setScope('days')">ימים בשבוע</button>
+        <button class="scope-btn" data-scope="30d" onclick="setScope('30d')">30 יום קדימה</button>
+        <button class="scope-btn" data-scope="specific" onclick="setScope('specific')">תאריך ספציפי</button>
+      </div>
+    </div>
+
+    <div class="fg days-wrap" id="days-section">
       <label>ימים לניטור</label>
       <div class="days-pick" id="days-pick">
         <button class="day-btn" onclick="toggleDay(this,'א')">א׳</button>
@@ -107,6 +205,12 @@
         <button class="day-btn" onclick="toggleDay(this,'ש')">ש׳</button>
       </div>
     </div>
+
+    <div class="fg" id="specific-section" style="display:none">
+      <label>תאריך ספציפי</label>
+      <input id="f-specific-date" type="date" />
+    </div>
+
     <div class="form-actions">
       <button class="btn-save" onclick="addRestaurant()">הוסף</button>
       <button class="btn-cancel" onclick="toggleForm()">ביטול</button>
@@ -119,12 +223,32 @@
 <script>
 const DAYS_ALL = ['א','ב','ג','ד','ה','ו','ש'];
 let selDays = [];
+let currentScope = 'days';
+
+// Default scan date to today
+(function() {
+  const d = new Date();
+  document.getElementById('scan-date').value = d.toISOString().slice(0,10);
+})();
+
+function setScope(scope) {
+  currentScope = scope;
+  document.querySelectorAll('.scope-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.scope === scope);
+  });
+  document.getElementById('days-section').style.display = scope === 'days' ? '' : 'none';
+  document.getElementById('specific-section').style.display = scope === 'specific' ? '' : 'none';
+}
 
 function toggleForm() {
   const f = document.getElementById('add-form');
   f.classList.toggle('open');
   selDays = [];
+  currentScope = 'days';
   document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('sel'));
+  document.querySelectorAll('.scope-btn').forEach(b => b.classList.toggle('active', b.dataset.scope === 'days'));
+  document.getElementById('days-section').style.display = '';
+  document.getElementById('specific-section').style.display = 'none';
   document.getElementById('f-name').value = '';
   document.getElementById('f-slug').value = '';
 }
@@ -140,70 +264,125 @@ async function load() {
   render(data);
 }
 
+function scopeLabel(r) {
+  const scope = r.scope || 'days';
+  if (scope === '30d') return { cls: 'badge-scope-30d', text: '30 יום קדימה' };
+  if (scope === 'specific') return { cls: 'badge-scope-specific', text: r.specific_date || 'תאריך ספציפי' };
+  const days = r.days || [];
+  return { cls: 'badge-scope-days', text: days.length ? days.map(d => d + '׳').join(' ') : 'ימים בשבוע' };
+}
+
 function render(data) {
-  document.getElementById('s-total').textContent = data.length;
-  document.getElementById('s-active').textContent = data.filter(r => r.active).length;
+  const active = data.filter(r => r.active).length;
+  document.getElementById('header-sub').textContent =
+    `${data.length} מקומות במעקב · ${active} פעילים`;
   const list = document.getElementById('list');
-  if (!data.length) { list.innerHTML = '<div class="empty">אין מקומות במעקב עדיין<br>לחץ על "+ הוסף מקום" כדי להתחיל</div>'; return; }
-  list.innerHTML = data.map(r => `
-    <div class="card">
+  if (!data.length) {
+    list.innerHTML = '<div class="empty">אין מקומות במעקב עדיין<br>לחץ על "+ הוסף מקום" כדי להתחיל</div>';
+    return;
+  }
+  const sl = scopeLabel;
+  list.innerHTML = data.map(r => {
+    const sc = sl(r);
+    const scope = r.scope || 'days';
+    return `
+    <div class="card${scope === 'specific' ? ' specific' : ''}">
       <div class="card-header">
         <div>
           <div class="rest-name">${r.name}</div>
           <div class="badges">
             <span class="badge badge-${r.platform}">${r.platform === 'ontopo' ? 'אונטופו' : 'טביט'}</span>
             <span class="badge ${r.active ? 'badge-active' : 'badge-paused'}">${r.active ? '● פעיל' : '⏸ מושהה'}</span>
+            <span class="badge ${sc.cls}">${sc.text}</span>
           </div>
           <div class="meta">
             <span>🕐 ${r.time}</span>
             <span>👥 ${r.guests} סועדים</span>
           </div>
-          <div class="days">
-            ${DAYS_ALL.map(d => `<span class="day ${r.days?.includes(d) ? 'on' : ''}">${d}׳</span>`).join('')}
-          </div>
+          ${scope === 'days' ? `<div class="days-row">${DAYS_ALL.map(d => `<span class="day-chip ${(r.days||[]).includes(d) ? 'on' : ''}">${d}׳</span>`).join('')}</div>` : ''}
           ${r.last_alert ? `<div class="last-alert">התראה אחרונה: ${new Date(r.last_alert).toLocaleString('he-IL')}</div>` : ''}
         </div>
         <div class="actions">
           <label class="toggle">
-            <input type="checkbox" ${r.active ? 'checked' : ''} onchange="toggle(${r.id})">
+            <input type="checkbox" ${r.active ? 'checked' : ''} onchange="toggleR(${r.id})">
             <span class="knob"></span>
           </label>
           <button class="btn-del" onclick="del(${r.id})">🗑</button>
         </div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 async function addRestaurant() {
   const name = document.getElementById('f-name').value.trim();
   const slug = document.getElementById('f-slug').value.trim();
   if (!name || !slug) { alert('נא למלא שם וכתובת'); return; }
-  if (!selDays.length) { alert('בחר לפחות יום אחד'); return; }
-  await fetch('/api/restaurants', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      name, slug,
-      platform: document.getElementById('f-platform').value,
-      time: document.getElementById('f-time').value,
-      guests: parseInt(document.getElementById('f-guests').value),
-      days: selDays
-    })
-  });
+  if (currentScope === 'days' && !selDays.length) { alert('בחר לפחות יום אחד'); return; }
+  if (currentScope === 'specific' && !document.getElementById('f-specific-date').value) {
+    alert('נא לבחור תאריך'); return;
+  }
+  const body = {
+    name, slug,
+    platform: document.getElementById('f-platform').value,
+    time: document.getElementById('f-time').value,
+    guests: parseInt(document.getElementById('f-guests').value),
+    scope: currentScope,
+    days: currentScope === 'days' ? selDays : [],
+    specific_date: currentScope === 'specific' ? document.getElementById('f-specific-date').value : '',
+  };
+  await fetch('/api/restaurants', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
   toggleForm();
   load();
 }
 
 async function del(id) {
   if (!confirm('להסיר את המסעדה?')) return;
-  await fetch(`/api/restaurants/${id}`, {method:'DELETE'});
+  await fetch(`/api/restaurants/${id}`, { method:'DELETE' });
   load();
 }
 
-async function toggle(id) {
-  await fetch(`/api/restaurants/${id}/toggle`, {method:'POST'});
+async function toggleR(id) {
+  await fetch(`/api/restaurants/${id}/toggle`, { method:'POST' });
   load();
+}
+
+async function scanAll() {
+  const date = document.getElementById('scan-date').value;
+  if (!date) { alert('בחר תאריך לסריקה'); return; }
+  const btn = document.getElementById('scan-btn');
+  const resultsEl = document.getElementById('scan-results');
+  btn.disabled = true;
+  btn.textContent = 'בודק...';
+  resultsEl.style.display = 'none';
+  resultsEl.innerHTML = '';
+  try {
+    const res = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date }),
+    });
+    const results = await res.json();
+    if (!results.length) {
+      resultsEl.innerHTML = '<div style="font-size:13px;color:#aaa;padding-top:6px">אין מסעדות פעילות לבדיקה</div>';
+    } else {
+      resultsEl.innerHTML = results.map(r => `
+        <div class="scan-row">
+          <span>${r.name}</span>
+          <span>
+            ${r.available
+              ? `<span class="scan-avail">✓ יש מקום</span>${r.booking_url ? ` <a class="scan-link" href="${r.booking_url}" target="_blank">להזמנה →</a>` : ''}`
+              : `<span class="scan-none">אין זמינות</span>`}
+          </span>
+        </div>`).join('');
+    }
+    resultsEl.style.display = 'block';
+  } catch(e) {
+    resultsEl.innerHTML = '<div style="font-size:13px;color:#c00">שגיאה בסריקה</div>';
+    resultsEl.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.textContent = 'בדוק הכל';
 }
 
 load();
