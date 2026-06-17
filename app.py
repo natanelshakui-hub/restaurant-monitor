@@ -237,6 +237,7 @@ def get_next_dates(restaurant):
     ]
 
 def monitor_loop():
+    print(">>> monitor_loop started, entering loop...", flush=True)
     while True:
         restaurants = load()
         for r in restaurants:
@@ -293,6 +294,7 @@ def toggle_restaurant(rid):
 # Start monitor thread on import so gunicorn workers also run it.
 # Guard against double-start when Flask reloader forks a child process.
 if not os.environ.get("WERKZEUG_RUN_MAIN"):
+    print(">>> Starting monitor thread...", flush=True)
     t = threading.Thread(target=monitor_loop, daemon=True)
     t.start()
 
