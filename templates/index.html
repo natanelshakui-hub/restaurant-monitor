@@ -194,7 +194,7 @@ input:checked + .knob:before { transform: translateX(16px); }
     </div>
 
     <div class="fg days-wrap" id="days-section">
-      <label>ימים לניטור</label>
+      <label id="days-label">ימים לניטור</label>
       <div class="days-pick" id="days-pick">
         <button class="day-btn" onclick="toggleDay(this,'א')">א׳</button>
         <button class="day-btn" onclick="toggleDay(this,'ב')">ב׳</button>
@@ -204,6 +204,7 @@ input:checked + .knob:before { transform: translateX(16px); }
         <button class="day-btn" onclick="toggleDay(this,'ו')">ו׳</button>
         <button class="day-btn" onclick="toggleDay(this,'ש')">ש׳</button>
       </div>
+      <div class="slug-hint" id="days-hint" style="display:none">לא חובה — אם לא תבחר ימים, יבדוק את כל 30 הימים</div>
     </div>
 
     <div class="fg" id="specific-section" style="display:none">
@@ -236,8 +237,10 @@ function setScope(scope) {
   document.querySelectorAll('.scope-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.scope === scope);
   });
-  document.getElementById('days-section').style.display = scope === 'days' ? '' : 'none';
+  document.getElementById('days-section').style.display = scope === 'specific' ? 'none' : '';
   document.getElementById('specific-section').style.display = scope === 'specific' ? '' : 'none';
+  document.getElementById('days-label').textContent = scope === '30d' ? 'סינון לפי ימים (אופציונלי)' : 'ימים לניטור';
+  document.getElementById('days-hint').style.display = scope === '30d' ? '' : 'none';
 }
 
 function toggleForm() {
@@ -319,6 +322,7 @@ async function addRestaurant() {
   const slug = document.getElementById('f-slug').value.trim();
   if (!name || !slug) { alert('נא למלא שם וכתובת'); return; }
   if (currentScope === 'days' && !selDays.length) { alert('בחר לפחות יום אחד'); return; }
+
   if (currentScope === 'specific' && !document.getElementById('f-specific-date').value) {
     alert('נא לבחור תאריך'); return;
   }

@@ -240,10 +240,17 @@ def check_tabit(restaurant):
 def send_whatsapp(restaurant, booking_url, slots=None):
     try:
         client = Client(TWILIO_SID, TWILIO_TOKEN)
+        _HE_DAYS = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
         name   = restaurant.get("name", "")
         date   = restaurant.get("next_date", "")
         time_r = restaurant.get("time", "")
         guests = restaurant.get("guests", 2)
+        try:
+            from datetime import date as _date
+            _d = _date.fromisoformat(date)
+            day_name = f"יום {_HE_DAYS[_d.weekday()]}"
+        except Exception:
+            day_name = ""
 
         # Build seating areas block if slot details were provided
         if slots:
@@ -269,7 +276,7 @@ def send_whatsapp(restaurant, booking_url, slots=None):
         msg = (
             f"🍽️ *התפנה מקום!*\n\n"
             f"*{name}*\n"
-            f"📅 {date} בשעה {time_r}\n"
+            f"📅 {day_name}, {date} בשעה {time_r}\n"
             f"👥 {guests} סועדים"
             f"{seats_block}\n\n"
             f"לחץ להזמנה:\n{booking_url}"
@@ -312,7 +319,13 @@ def get_next_dates(restaurant):
         return [sd] if sd else []
 
     if scope == "30d":
-        return [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(30)]
+        day_map = {"א": 6, "ב": 0, "ג": 1, "ד": 2, "ה": 3, "ו": 4, "ש": 5}
+        wanted = [day_map[d] for d in restaurant.get("days", []) if d in day_map]
+        return [
+            (today + timedelta(days=i)).strftime("%Y-%m-%d")
+            for i in range(30)
+            if not wanted or (today + timedelta(days=i)).weekday() in wanted
+        ]
 
     # "days" — weekday-based (default)
     day_map = {"א": 6, "ב": 0, "ג": 1, "ד": 2, "ה": 3, "ו": 4, "ש": 5}
