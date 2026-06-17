@@ -170,9 +170,13 @@ input:checked + .knob:before { transform: translateX(16px); }
         </select>
       </div>
       <div class="fg" style="grid-column:span 2">
-        <label>כתובת באתר (slug)</label>
-        <input id="f-slug" type="text" placeholder="מה שמופיע ב-URL של המסעדה" />
-        <div class="slug-hint">למשל: anona-tlv או 69127207</div>
+        <label>קישור לדף המסעדה באונטופו</label>
+        <div style="display:flex;gap:6px">
+          <input id="f-slug" type="text" placeholder="הדבק כתובת URL של דף המסעדה" style="flex:1" oninput="onSlugInput()" />
+          <button type="button" id="verify-btn" onclick="verifySlug()" style="display:none;padding:8px 12px;border:1px solid #ddd;border-radius:8px;background:#faf9f7;cursor:pointer;font-size:12px;white-space:nowrap">אמת ✓</button>
+        </div>
+        <div class="slug-hint" id="slug-hint">למשל: https://ontopo.com/he/il/page/anona-tlv</div>
+        <div id="slug-status" style="font-size:12px;margin-top:4px;display:none"></div>
       </div>
       <div class="fg">
         <label>שעה מועדפת</label>
@@ -387,6 +391,46 @@ async function scanAll() {
   }
   btn.disabled = false;
   btn.textContent = 'בדוק הכל';
+}
+
+function onSlugInput() {
+  const val = document.getElementById('f-slug').value.trim();
+  document.getElementById('verify-btn').style.display = val ? '' : 'none';
+  document.getElementById('slug-status').style.display = 'none';
+}
+
+async function verifySlug() {
+  const val = document.getElementById('f-slug').value.trim();
+  const statusEl = document.getElementById('slug-status');
+  const btn = document.getElementById('verify-btn');
+  btn.textContent = 'בודק...';
+  btn.disabled = true;
+  statusEl.style.display = 'none';
+  try {
+    const res = await fetch('/api/verify-slug', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({slug: val}),
+    });
+    const data = await res.json();
+    statusEl.style.display = '';
+    if (data.ok) {
+      statusEl.style.color = '#0f6e56';
+      statusEl.textContent = `✓ נמצא: ${data.name || data.slug}`;
+      if (!document.getElementById('f-name').value && data.name) {
+        document.getElementById('f-name').value = data.name;
+      }
+    } else {
+      statusEl.style.color = '#c00';
+      statusEl.textContent = `✗ ${data.error}`;
+    }
+  } catch(e) {
+    statusEl.style.display = '';
+    statusEl.style.color = '#c00';
+    statusEl.textContent = 'שגיאת רשת';
+  }
+  btn.textContent = 'אמת ✓';
+  btn.disabled = false;
 }
 
 load();

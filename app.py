@@ -418,6 +418,31 @@ def toggle_restaurant(rid):
     save(data)
     return jsonify({"ok": True})
 
+@app.route("/api/verify-slug", methods=["POST"])
+def verify_slug():
+    raw = (request.json or {}).get("slug", "").strip()
+    slug = raw.rstrip("/").split("/")[-1]
+    if not slug:
+        return jsonify({"ok": False, "error": "slug ריק"})
+    try:
+        jwt = _get_ontopo_jwt()
+        today = datetime.now().strftime("%Y%m%d")
+        payload = {"slug": slug, "locale": "he", "criteria": {"size": "2", "date": today, "time": "2000"}}
+        r = requests.post(
+            "https://ontopo.com/api/availability_search",
+            json=payload,
+            headers={"token": jwt, "Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
+            timeout=10,
+        )
+        data = r.json()
+        venue = data.get("venue") or data.get("page", {})
+        if venue or data.get("areas"):
+            name = (data.get("page") or {}).get("title") or (data.get("venue") or {}).get("name") or ""
+            return jsonify({"ok": True, "slug": slug, "name": name})
+        return jsonify({"ok": False, "error": "המסעדה לא נמצאה — בדוק את הקישור"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
 @app.route("/api/scan", methods=["POST"])
 def scan_all():
     date = (request.json or {}).get("date", "")
