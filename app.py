@@ -52,8 +52,18 @@ def load():
             timeout=10,
         )
         r.raise_for_status()
-        content = r.json()["files"][GIST_FILENAME]["content"]
-        return json.loads(content)
+        files = r.json()["files"]
+        print(f">>> [gist] files in gist: {list(files.keys())}", flush=True)
+        # exact match first, then case-insensitive, then first file
+        file_obj = (
+            files.get(GIST_FILENAME)
+            or next((v for k, v in files.items() if k.lower() == GIST_FILENAME.lower()), None)
+            or next(iter(files.values()), None)
+        )
+        if file_obj is None:
+            print(">>> [gist] no files found in gist, returning []", flush=True)
+            return []
+        return json.loads(file_obj["content"])
     # local fallback (dev / no Gist configured)
     if not os.path.exists(DATA_FILE):
         return []
