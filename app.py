@@ -240,15 +240,23 @@ def monitor_loop():
     print(">>> monitor_loop started, entering loop...", flush=True)
     while True:
         try:
+            print(">>> [loop] calling load()...", flush=True)
             restaurants = load()
+            print(f">>> [loop] loaded {len(restaurants)} restaurants", flush=True)
             for r in restaurants:
+                name = r.get("name", "?")
                 if not r.get("active", True):
+                    print(f">>> [loop] {name} — inactive, skipping", flush=True)
                     continue
-                for date in get_next_dates(r):
+                dates = get_next_dates(r)
+                print(f">>> [loop] {name} — checking {len(dates)} dates: {dates}", flush=True)
+                for date in dates:
                     r["next_date"] = date
                     key = f"{r['id']}_{date}"
                     platform = r.get("platform", "ontopo")
+                    print(f">>> [loop] {name} | {date} | calling check_{platform}...", flush=True)
                     available, slots = check_ontopo(r) if platform == "ontopo" else check_tabit(r)
+                    print(f">>> [loop] {name} | {date} | result: available={available}", flush=True)
                     if available and key not in NOTIFIED:
                         booking_url = get_booking_url(r)
                         send_whatsapp(r, booking_url, slots)
@@ -256,7 +264,8 @@ def monitor_loop():
                         r["last_alert"] = datetime.now().isoformat()
                         save(restaurants)
         except Exception as e:
-            print(f"[monitor_loop] unhandled error: {e}", flush=True)
+            print(f">>> [loop] unhandled error: {e}", flush=True)
+        print(">>> [loop] cycle done, sleeping 300s...", flush=True)
         time.sleep(300)  # check every 5 minutes
 
 # ---------- Routes ----------
