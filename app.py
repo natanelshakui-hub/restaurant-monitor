@@ -306,15 +306,26 @@ def monitor_loop():
                     r["next_date"] = date
                     key = f"{r['id']}_{date}"
                     platform = r.get("platform", "ontopo")
-                    print(f">>> [loop] {name} | {date} | calling check_{platform}...", flush=True)
+                    print(
+                        f">>> [loop] {name} | {date} | platform={platform} "
+                        f"days={r.get('days')} time={r.get('time')} guests={r.get('guests')} "
+                        f"slug={r.get('slug')}",
+                        flush=True,
+                    )
                     available, slots = check_ontopo(r) if platform == "ontopo" else check_tabit(r)
                     print(f">>> [loop] {name} | {date} | result: available={available}", flush=True)
                     if available and key not in NOTIFIED:
                         booking_url = get_booking_url(r)
                         send_whatsapp(r, booking_url, slots)
                         NOTIFIED.add(key)
-                        r["last_alert"] = datetime.now().isoformat()
-                        save(restaurants)
+                        # Update only last_alert in the live cache — never overwrite
+                        # the whole list from a stale snapshot (would clobber edits).
+                        current = load()
+                        for item in current:
+                            if item["id"] == r["id"]:
+                                item["last_alert"] = datetime.now().isoformat()
+                                break
+                        save(current)
         except Exception as e:
             print(f">>> [loop] unhandled error: {e}", flush=True)
         print(">>> [loop] cycle done, sleeping 300s...", flush=True)
