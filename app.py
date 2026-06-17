@@ -44,7 +44,13 @@ _GIST_HEADERS = lambda: {
 }
 
 # ---------- Data helpers ----------
-def load():
+# In-memory cache — web routes never touch the network.
+# Gist (or local file) is only accessed at startup and on mutations.
+_cache: list = []
+_cache_ready = False
+
+def _load_from_gist() -> list:
+    """Fetch restaurant list from Gist (or local file). Called once at startup."""
     if GIST_ID and GITHUB_TOKEN:
         r = requests.get(
             f"https://api.github.com/gists/{GIST_ID}",
@@ -53,24 +59,20 @@ def load():
         )
         r.raise_for_status()
         files = r.json()["files"]
-        print(f">>> [gist] files in gist: {list(files.keys())}", flush=True)
-        # exact match first, then case-insensitive, then first file
+        print(f">>> [gist] files: {list(files.keys())}", flush=True)
         file_obj = (
             files.get(GIST_FILENAME)
             or next((v for k, v in files.items() if k.lower() == GIST_FILENAME.lower()), None)
             or next(iter(files.values()), None)
         )
-        if file_obj is None:
-            print(">>> [gist] no files found in gist, returning []", flush=True)
-            return []
-        return json.loads(file_obj["content"])
-    # local fallback (dev / no Gist configured)
+        return json.loads(file_obj["content"]) if file_obj else []
     if not os.path.exists(DATA_FILE):
         return []
     with open(DATA_FILE) as f:
         return json.load(f)
 
-def save(data):
+def _save_to_gist(data: list):
+    """Persist restaurant list to Gist (or local file). Runs in a background thread."""
     if GIST_ID and GITHUB_TOKEN:
         requests.patch(
             f"https://api.github.com/gists/{GIST_ID}",
@@ -81,6 +83,16 @@ def save(data):
         return
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+def load() -> list:
+    """Return the in-memory restaurant list (no network call)."""
+    return list(_cache)
+
+def save(data: list):
+    """Update the in-memory cache and persist to Gist in the background."""
+    global _cache
+    _cache = list(data)
+    threading.Thread(target=_save_to_gist, args=(list(data),), daemon=True).start()
 
 # ---------- Logging helper ----------
 def log_check(name, date, time_str, guests, available, detail=""):
@@ -347,9 +359,16 @@ def toggle_restaurant(rid):
     save(data)
     return jsonify({"ok": True})
 
-# Start monitor thread on import so gunicorn workers also run it.
+# Load restaurant list into memory once at startup (before monitor thread starts).
 # Guard against double-start when Flask reloader forks a child process.
 if not os.environ.get("WERKZEUG_RUN_MAIN"):
+    try:
+        print(">>> Loading restaurants from storage...", flush=True)
+        _cache = _load_from_gist()
+        print(f">>> Loaded {len(_cache)} restaurants.", flush=True)
+    except Exception as e:
+        print(f">>> Failed to load from storage: {e} — starting with empty list.", flush=True)
+        _cache = []
     print(">>> Starting monitor thread...", flush=True)
     t = threading.Thread(target=monitor_loop, daemon=True)
     t.start()
