@@ -290,7 +290,11 @@ def toggle_restaurant(rid):
     save(data)
     return jsonify({"ok": True})
 
-if __name__ == "__main__":
+# Start monitor thread on import so gunicorn workers also run it.
+# Guard against double-start when Flask reloader forks a child process.
+if not os.environ.get("WERKZEUG_RUN_MAIN"):
     t = threading.Thread(target=monitor_loop, daemon=True)
     t.start()
+
+if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
