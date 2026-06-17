@@ -144,6 +144,12 @@ def check_ontopo(restaurant):
             timeout=15,
         )
         data = r.json()
+        print(
+            f">>> [ontopo raw] {name} | {date_str} {time_str} | "
+            f"payload={json.dumps(payload)} | "
+            f"response={json.dumps(data, ensure_ascii=False)}",
+            flush=True,
+        )
         page = data.get("page")
 
         if not page:
