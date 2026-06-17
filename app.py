@@ -282,17 +282,16 @@ def send_whatsapp(restaurant, booking_url, slots=None):
 def get_booking_url(restaurant):
     platform = restaurant.get("platform", "ontopo")
     slug     = restaurant.get("slug", "")
-    date     = restaurant.get("next_date", "")
+    # URL date param uses YYYYMMDD (no dashes), same as the API
+    date     = restaurant.get("next_date", "").replace("-", "")
     time_r   = restaurant.get("time", "20:00").replace(":", "")
     guests   = restaurant.get("guests", 2)
 
     if platform == "ontopo":
-        # slug is the numeric page ID (e.g. "69127207")
-        # URL format: https://ontopo.com/he/il/page/<id>?date=...&time=HHMM&partySize=N
-        page_id = slug.removeprefix("page/")
+        page_id = slug.rstrip("/").split("/")[-1]
         return (
             f"https://ontopo.com/he/il/page/{page_id}"
-            f"?date={date}&time={time_r}&partySize={guests}"
+            f"?date={date}&time={time_r}&size={guests}"
         )
     else:
         return (
