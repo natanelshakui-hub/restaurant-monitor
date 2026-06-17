@@ -25,20 +25,50 @@ def _get_ontopo_jwt():
 app = Flask(__name__)
 DATA_FILE = "restaurants.json"
 
-# --- Twilio WhatsApp config (filled from .env) ---
+# --- Twilio WhatsApp config ---
 TWILIO_SID    = os.environ.get("TWILIO_SID", "")
 TWILIO_TOKEN  = os.environ.get("TWILIO_TOKEN", "")
 TWILIO_FROM   = os.environ.get("TWILIO_FROM", "whatsapp:+14155238886")
 WHATSAPP_TO   = os.environ.get("WHATSAPP_TO", "whatsapp:+972507557559")
 
+# --- GitHub Gist persistent storage ---
+# Set GIST_ID + GITHUB_TOKEN in Render env vars to enable.
+# The Gist must contain a file named "restaurants.json".
+# Without these vars the app falls back to a local file (dev only).
+GIST_ID       = os.environ.get("GIST_ID", "")
+GITHUB_TOKEN  = os.environ.get("GITHUB_TOKEN", "")
+GIST_FILENAME = "restaurants.json"
+_GIST_HEADERS = lambda: {
+    "Authorization": f"token {GITHUB_TOKEN}",
+    "Accept": "application/vnd.github+json",
+}
+
 # ---------- Data helpers ----------
 def load():
+    if GIST_ID and GITHUB_TOKEN:
+        r = requests.get(
+            f"https://api.github.com/gists/{GIST_ID}",
+            headers=_GIST_HEADERS(),
+            timeout=10,
+        )
+        r.raise_for_status()
+        content = r.json()["files"][GIST_FILENAME]["content"]
+        return json.loads(content)
+    # local fallback (dev / no Gist configured)
     if not os.path.exists(DATA_FILE):
         return []
     with open(DATA_FILE) as f:
         return json.load(f)
 
 def save(data):
+    if GIST_ID and GITHUB_TOKEN:
+        requests.patch(
+            f"https://api.github.com/gists/{GIST_ID}",
+            headers=_GIST_HEADERS(),
+            json={"files": {GIST_FILENAME: {"content": json.dumps(data, ensure_ascii=False, indent=2)}}},
+            timeout=10,
+        ).raise_for_status()
+        return
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
