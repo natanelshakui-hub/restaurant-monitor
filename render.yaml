@@ -3,7 +3,8 @@ services:
     name: restaurant-monitor
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --workers 1 --timeout 120 --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
     envVars:
       - key: TWILIO_SID
         sync: false

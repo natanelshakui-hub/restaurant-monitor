@@ -239,24 +239,31 @@ def get_next_dates(restaurant):
 def monitor_loop():
     print(">>> monitor_loop started, entering loop...", flush=True)
     while True:
-        restaurants = load()
-        for r in restaurants:
-            if not r.get("active", True):
-                continue
-            for date in get_next_dates(r):
-                r["next_date"] = date
-                key = f"{r['id']}_{date}"
-                platform = r.get("platform", "ontopo")
-                available, slots = check_ontopo(r) if platform == "ontopo" else check_tabit(r)
-                if available and key not in NOTIFIED:
-                    booking_url = get_booking_url(r)
-                    send_whatsapp(r, booking_url, slots)
-                    NOTIFIED.add(key)
-                    r["last_alert"] = datetime.now().isoformat()
-                    save(restaurants)
+        try:
+            restaurants = load()
+            for r in restaurants:
+                if not r.get("active", True):
+                    continue
+                for date in get_next_dates(r):
+                    r["next_date"] = date
+                    key = f"{r['id']}_{date}"
+                    platform = r.get("platform", "ontopo")
+                    available, slots = check_ontopo(r) if platform == "ontopo" else check_tabit(r)
+                    if available and key not in NOTIFIED:
+                        booking_url = get_booking_url(r)
+                        send_whatsapp(r, booking_url, slots)
+                        NOTIFIED.add(key)
+                        r["last_alert"] = datetime.now().isoformat()
+                        save(restaurants)
+        except Exception as e:
+            print(f"[monitor_loop] unhandled error: {e}", flush=True)
         time.sleep(300)  # check every 5 minutes
 
 # ---------- Routes ----------
+@app.route("/health")
+def health():
+    return "ok", 200
+
 @app.route("/")
 def index():
     return render_template("index.html")
