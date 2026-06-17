@@ -115,7 +115,9 @@ def check_ontopo(restaurant):
            - no `page` field at all                   → nothing available
     """
     name     = restaurant.get("name", "?")
-    slug     = restaurant.get("slug", "")
+    raw_slug = restaurant.get("slug", "")
+    # slug may be stored as full URL, path, or bare ID — extract only the numeric page ID
+    slug     = raw_slug.rstrip("/").split("/")[-1]
     guests   = str(restaurant.get("guests", 2))
     date_str = restaurant.get("next_date", datetime.now().strftime("%Y-%m-%d"))
     time_str = restaurant.get("time", "20:00").replace(":", "")
@@ -152,7 +154,24 @@ def check_ontopo(restaurant):
         )
         page = data.get("page")
 
+        # Some responses may have areas at top level even without page
+        # (e.g. partial availability). Check top-level areas first.
         if not page:
+            top_areas = data.get("areas", [])
+            if top_areas:
+                seat_options = []
+                for area in top_areas:
+                    for opt in area.get("options", []):
+                        if opt.get("method") == "seat":
+                            seat_options.append({
+                                "area": area.get("name", ""),
+                                "time": opt.get("time", time_str),
+                                "method": "seat",
+                            })
+                if seat_options:
+                    areas_summary = ", ".join(f"{o['area']} {o['time']}" for o in seat_options[:3])
+                    log_check(name, date_str, time_str, guests, True, f"{len(seat_options)} אופציות (ללא page): {areas_summary}")
+                    return True, seat_options
             log_check(name, date_str, time_str, guests, False, "אין תגובת page מה-API")
             return False, []
 
@@ -165,8 +184,9 @@ def check_ontopo(restaurant):
             log_check(name, date_str, time_str, guests, False, f"רק fallback: {method}")
             return False, []
 
-        # Normal path: areas with seat options
-        areas = page.get("areas", [])
+        # Normal path: areas is at the TOP LEVEL of the response (not under page).
+        # page only contains title/subtitle metadata.
+        areas = data.get("areas", page.get("areas", []))
         seat_options = []
         for area in areas:
             for opt in area.get("options", []):
