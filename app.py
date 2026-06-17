@@ -108,7 +108,7 @@ def check_ontopo(restaurant):
     Flow (reverse-engineered from ontopo.com frontend):
       1. POST /api/loginAnonymously  → jwt_token (cached 14 min)
       2. POST /api/availability_search with header token:<jwt> and body:
-           {slug, locale, criteria:{size (str), date (YYYY-MM-DD), time (HHMM)}}
+           {slug, locale, criteria:{size (str), date (YYYYMMDD no dashes!), time (HHMM)}}
       3. Response contains `page` only when availability exists:
            - page.areas[].options[].method == "seat"  → real table available
            - page.fallback.method in standby/callback → waiting-list available
@@ -119,7 +119,8 @@ def check_ontopo(restaurant):
     # slug may be stored as full URL, path, or bare ID — extract only the numeric page ID
     slug     = raw_slug.rstrip("/").split("/")[-1]
     guests   = str(restaurant.get("guests", 2))
-    date_str = restaurant.get("next_date", datetime.now().strftime("%Y-%m-%d"))
+    # API requires date as YYYYMMDD (no dashes). YYYY-MM-DD silently returns no availability.
+    date_str = restaurant.get("next_date", datetime.now().strftime("%Y-%m-%d")).replace("-", "")
     time_str = restaurant.get("time", "20:00").replace(":", "")
     locale   = restaurant.get("locale", "he")
 
