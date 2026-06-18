@@ -26,10 +26,11 @@ app = Flask(__name__)
 DATA_FILE = "restaurants.json"
 
 # --- Twilio WhatsApp config ---
-TWILIO_SID    = os.environ.get("TWILIO_SID", "")
-TWILIO_TOKEN  = os.environ.get("TWILIO_TOKEN", "")
-TWILIO_FROM   = os.environ.get("TWILIO_FROM", "whatsapp:+14155238886")
-WHATSAPP_TO   = os.environ.get("WHATSAPP_TO", "whatsapp:+972507557559")
+TWILIO_SID         = os.environ.get("TWILIO_SID", "")
+TWILIO_TOKEN       = os.environ.get("TWILIO_TOKEN", "")
+TWILIO_FROM        = os.environ.get("TWILIO_FROM", "whatsapp:+14155238886")
+WHATSAPP_TO        = os.environ.get("WHATSAPP_TO", "whatsapp:+972507557559")
+TWILIO_CONTENT_SID = os.environ.get("TWILIO_CONTENT_SID", "")
 
 # --- GitHub Gist persistent storage ---
 # Set GIST_ID + GITHUB_TOKEN in Render env vars to enable.
@@ -48,6 +49,48 @@ _GIST_HEADERS = lambda: {
 # Gist (or local file) is only accessed at startup and on mutations.
 _cache: list = []
 _cache_ready = False
+
+# ---------- Dismissed slots (persistent, Gist-backed) ----------
+# Key: "{restaurant_id}_{YYYY-MM-DD}", value: True
+# Written when user taps "לא רלוונטי" quick-reply button.
+_dismissed: dict = {}
+
+# Last alert sent per recipient number — used by webhook to resolve
+# which slot a "dismiss" reply refers to.
+_last_alert_ctx: dict = {}  # whatsapp_number → {"rid": int, "date": str}
+
+def _load_dismissed() -> dict:
+    if GIST_ID and GITHUB_TOKEN:
+        r = requests.get(
+            f"https://api.github.com/gists/{GIST_ID}",
+            headers=_GIST_HEADERS(), timeout=10,
+        )
+        files = r.json().get("files", {})
+        f = files.get("dismissed.json")
+        return json.loads(f["content"]) if f else {}
+    path = "dismissed.json"
+    return json.load(open(path)) if os.path.exists(path) else {}
+
+def _save_dismissed_bg(data: dict):
+    if GIST_ID and GITHUB_TOKEN:
+        requests.patch(
+            f"https://api.github.com/gists/{GIST_ID}",
+            headers=_GIST_HEADERS(),
+            json={"files": {"dismissed.json": {"content": json.dumps(data)}}},
+            timeout=10,
+        )
+    else:
+        with open("dismissed.json", "w") as fh:
+            json.dump(data, fh)
+
+def is_dismissed(rid: int, date: str) -> bool:
+    return _dismissed.get(f"{rid}_{date}", False)
+
+def dismiss_slot(rid: int, date: str):
+    key = f"{rid}_{date}"
+    _dismissed[key] = True
+    print(f"[dismiss] {key} — marked dismissed", flush=True)
+    threading.Thread(target=_save_dismissed_bg, args=(dict(_dismissed),), daemon=True).start()
 
 def _load_from_gist() -> list:
     """Fetch restaurant list from Gist (or local file). Called once at startup."""
@@ -237,54 +280,75 @@ def check_tabit(restaurant):
         return False, []
 
 # ---------- WhatsApp sender ----------
+_HE_DAYS = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
+
+def _day_name(date_str: str) -> str:
+    try:
+        from datetime import date as _date
+        return f"יום {_HE_DAYS[_date.fromisoformat(date_str).weekday()]}"
+    except Exception:
+        return ""
+
+def _seats_block(slots) -> str:
+    if not slots:
+        return ""
+    areas: dict[str, list[str]] = {}
+    for s in slots:
+        area = s.get("area") or "כללי"
+        t = s.get("time", "")
+        if len(t) == 4 and t.isdigit():
+            t = f"{t[:2]}:{t[2:]}"
+        areas.setdefault(area, [])
+        if t and t not in areas[area]:
+            areas[area].append(t)
+    lines = "\n".join(f"  • {a}: {', '.join(ts)}" for a, ts in areas.items())
+    return f"\n\n🪑 *אזורי ישיבה זמינים:*\n{lines}"
+
 def send_whatsapp(restaurant, booking_url, slots=None):
     try:
         client = Client(TWILIO_SID, TWILIO_TOKEN)
-        _HE_DAYS = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
         name   = restaurant.get("name", "")
         date   = restaurant.get("next_date", "")
         time_r = restaurant.get("time", "")
         guests = restaurant.get("guests", 2)
-        try:
-            from datetime import date as _date
-            _d = _date.fromisoformat(date)
-            day_name = f"יום {_HE_DAYS[_d.weekday()]}"
-        except Exception:
-            day_name = ""
+        day    = _day_name(date)
+        seats  = _seats_block(slots)
 
-        # Build seating areas block if slot details were provided
-        if slots:
-            # Group by area name, collect unique times per area
-            areas: dict[str, list[str]] = {}
-            for s in slots:
-                area = s.get("area") or "כללי"
-                t = s.get("time", "")
-                # Convert HHMM → HH:MM for readability
-                if len(t) == 4 and t.isdigit():
-                    t = f"{t[:2]}:{t[2:]}"
-                areas.setdefault(area, [])
-                if t and t not in areas[area]:
-                    areas[area].append(t)
-            areas_lines = "\n".join(
-                f"  • {area}: {', '.join(times) if times else ''}"
-                for area, times in areas.items()
+        # Record context so webhook can resolve which slot "dismiss" refers to
+        _last_alert_ctx[WHATSAPP_TO] = {"rid": restaurant.get("id"), "date": date}
+
+        if TWILIO_CONTENT_SID:
+            # Send via approved WhatsApp template (includes Quick Reply buttons)
+            content_variables = json.dumps({
+                "1": name,
+                "2": day,
+                "3": date,
+                "4": time_r,
+                "5": str(guests),
+                "6": seats,
+                "7": booking_url,
+            }, ensure_ascii=False)
+            client.messages.create(
+                content_sid=TWILIO_CONTENT_SID,
+                content_variables=content_variables,
+                from_=TWILIO_FROM,
+                to=WHATSAPP_TO,
             )
-            seats_block = f"\n\n🪑 *אזורי ישיבה זמינים:*\n{areas_lines}"
         else:
-            seats_block = ""
+            # Fallback: plain-text message (no template configured yet)
+            msg = (
+                f"🍽️ *התפנה מקום!*\n\n"
+                f"*{name}*\n"
+                f"📅 {day}, {date} בשעה {time_r}\n"
+                f"👥 {guests} סועדים"
+                f"{seats}\n\n"
+                f"לחץ להזמנה:\n{booking_url}"
+            )
+            client.messages.create(body=msg, from_=TWILIO_FROM, to=WHATSAPP_TO)
 
-        msg = (
-            f"🍽️ *התפנה מקום!*\n\n"
-            f"*{name}*\n"
-            f"📅 {day_name}, {date} בשעה {time_r}\n"
-            f"👥 {guests} סועדים"
-            f"{seats_block}\n\n"
-            f"לחץ להזמנה:\n{booking_url}"
-        )
-        client.messages.create(body=msg, from_=TWILIO_FROM, to=WHATSAPP_TO)
-        print(f"[WhatsApp] נשלח עבור {name}")
+        print(f"[WhatsApp] נשלח עבור {name} ({date})", flush=True)
     except Exception as e:
-        print(f"[WhatsApp] שגיאה: {e}")
+        print(f"[WhatsApp] שגיאה: {e}", flush=True)
 
 def get_booking_url(restaurant):
     platform = restaurant.get("platform", "ontopo")
@@ -362,7 +426,7 @@ def monitor_loop():
                     )
                     available, slots = check_ontopo(r) if platform == "ontopo" else check_tabit(r)
                     print(f">>> [loop] {name} | {date} | result: available={available}", flush=True)
-                    if available and key not in NOTIFIED:
+                    if available and key not in NOTIFIED and not is_dismissed(r["id"], date):
                         booking_url = get_booking_url(r)
                         send_whatsapp(r, booking_url, slots)
                         NOTIFIED.add(key)
@@ -465,6 +529,24 @@ def scan_all():
         })
     return jsonify(results)
 
+@app.route("/api/whatsapp-reply", methods=["POST"])
+def whatsapp_reply():
+    """Twilio webhook — fires when user taps a Quick Reply button on a WhatsApp message."""
+    button_payload = request.values.get("ButtonPayload", "").strip()
+    from_num       = request.values.get("From", "").strip()
+    print(f"[webhook] ButtonPayload={button_payload!r} From={from_num}", flush=True)
+
+    if button_payload == "dismiss":
+        ctx = _last_alert_ctx.get(from_num)
+        if ctx:
+            dismiss_slot(ctx["rid"], ctx["date"])
+        else:
+            print("[webhook] dismiss: no context found for sender", flush=True)
+    # "save" payload needs no server action — user just acknowledges
+
+    # Return empty TwiML so Twilio doesn't retry or reply automatically
+    return '<Response></Response>', 200, {"Content-Type": "text/xml"}
+
 # Load restaurant list into memory once at startup (before monitor thread starts).
 # Guard against double-start when Flask reloader forks a child process.
 if not os.environ.get("WERKZEUG_RUN_MAIN"):
@@ -475,6 +557,12 @@ if not os.environ.get("WERKZEUG_RUN_MAIN"):
     except Exception as e:
         print(f">>> Failed to load from storage: {e} — starting with empty list.", flush=True)
         _cache = []
+    try:
+        _dismissed = _load_dismissed()
+        print(f">>> Loaded {len(_dismissed)} dismissed slots.", flush=True)
+    except Exception as e:
+        print(f">>> Failed to load dismissed: {e}", flush=True)
+        _dismissed = {}
     print(">>> Starting monitor thread...", flush=True)
     t = threading.Thread(target=monitor_loop, daemon=True)
     t.start()
